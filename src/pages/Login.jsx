@@ -31,20 +31,25 @@ export default function Login() {
   const [loading,  setLoading]  = useState(false);
   const [gLoading, setGLoading] = useState(true);
 
-  const { login, loginWithGoogle, emailExists } = useAuth();
+  const { login, loginWithGoogle, logout, hasPasswordLinked } = useAuth();
   const navigate = useNavigate();
 
-  // Catch redirect result on page reload (Google redirect fallback)
   useEffect(() => {
     getRedirectResult(auth)
-      .then((result) => {
-        if (result?.user) navigate("/dashboard");
+      .then(async (result) => {
+        if (!result?.user) return;
+        if (!hasPasswordLinked(result.user)) {
+          await logout();
+          setError("No registered account for this Google address. Please sign up first.");
+          return;
+        }
+        navigate("/dashboard");
       })
       .catch((err) => {
-        if (err?.code) setError(ERR[err.code] || "Google sign-in failed. Try again.");
+        if (err?.code) setError(ERR[err.code] || "Google sign-in failed.");
       })
       .finally(() => setGLoading(false));
-  }, [navigate]);
+  }, [navigate]); // eslint-disable-line
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -62,20 +67,13 @@ export default function Login() {
     setError(""); setGLoading(true);
     try {
       const result = await loginWithGoogle();
-      if (!result?.user) return; // redirect flow — page will reload
-
-      const user = result.user;
-
-      // ── Check if this Google account exists in Firebase ──────
-      const exists = await emailExists(user.email);
-      if (!exists) {
-        // Account was just created by the Google sign-in — delete it and block
-        await user.delete();
-        setError("No account found for this Google account. Please register first.");
+      if (!result?.user) return;
+      if (!hasPasswordLinked(result.user)) {
+        await logout();
+        setError("No registered account for this Google address. Please sign up first.");
         setGLoading(false);
         return;
       }
-
       navigate("/dashboard");
     } catch (err) {
       setError(ERR[err.code] || "Google sign-in failed. Try again.");
@@ -85,72 +83,92 @@ export default function Login() {
 
   return (
     <div className="auth-wrapper">
-      <div className="bg-orbs">
-        <span className="orb orb-1" />
-        <span className="orb orb-2" />
-        <span className="orb orb-3" />
+      {/* ── Left illustration panel ───────────── */}
+      <div className="auth-panel-left">
+        <div className="panel-blob panel-blob-1" />
+        <div className="panel-blob panel-blob-2" />
+        <div className="panel-blob panel-blob-3" />
+        <div className="panel-blob panel-blob-4" />
+        <div className="panel-blob panel-blob-5" />
+        <div className="panel-dots" />
+        <div className="panel-inner">
+          <div className="panel-brand">
+            <span className="panel-brand-dot" /> AuthApp
+          </div>
+          <div className="panel-illus">
+            <div className="panel-illus-ring panel-illus-ring-1" />
+            <div className="panel-illus-ring panel-illus-ring-2" />
+            <div className="panel-illus-core">🔐</div>
+            <div className="panel-illus-badge panel-illus-badge-1">✓ Secure</div>
+            <div className="panel-illus-badge panel-illus-badge-2">Firebase</div>
+          </div>
+          <div className="panel-tagline">
+            Welcome back to <span>AuthApp</span>
+          </div>
+          <p className="panel-caption">
+            Sign in securely with your email or continue with Google.
+          </p>
+        </div>
       </div>
 
-      <div className="auth-card">
-        <div className="card-header">
-          <div className="logo-mark"><span /></div>
-          <h1>Welcome back</h1>
-          <p>Sign in to your account to continue</p>
-        </div>
-
-        {error && <div className="error-banner"><span className="error-dot" />{error}</div>}
-
-        <button
-          className="btn-ghost"
-          onClick={handleGoogle}
-          disabled={gLoading}
-          style={{ marginBottom: "1.25rem" }}
-        >
-          {gLoading
-            ? <span className="spinner" style={{ borderTopColor: "var(--text)" }} />
-            : <><GoogleIcon />&nbsp;Continue with Google</>
-          }
-        </button>
-
-        <div className="auth-divider">
-          <span /><small>or sign in with email</small><span />
-        </div>
-
-        <form onSubmit={handleSubmit} className="auth-form">
-          <div className="input-group">
-            <span className="input-icon"><FiMail /></span>
-            <input
-              type="email" placeholder=" "
-              value={email} onChange={(e) => setEmail(e.target.value)} required
-            />
-            <label>Email address</label>
+      {/* ── Right form panel ──────────────────── */}
+      <div className="auth-panel-right">
+        <div className="auth-card">
+          <div className="card-header">
+            <div className="logo-mark"><span /></div>
+            <h1>Sign in</h1>
+            <p>Welcome back — enter your details to continue</p>
           </div>
 
-          <div className="input-group">
-            <span className="input-icon"><FiLock /></span>
-            <input
-              type={showPass ? "text" : "password"} placeholder=" "
-              value={password} onChange={(e) => setPassword(e.target.value)} required
-            />
-            <label>Password</label>
-            <button type="button" className="toggle-password"
-              onClick={() => setShowPass(!showPass)}>
-              {showPass ? <FiEyeOff /> : <FiEye />}
-            </button>
-          </div>
+          {error && (
+            <div className="error-banner">
+              <span className="error-dot" />{error}
+            </div>
+          )}
 
-          <div className="form-footer-row">
-            <Link to="/forgot-password" className="forgot-link">Forgot password?</Link>
-          </div>
-
-          <button type="submit" className="submit-btn" disabled={loading}>
-            {loading ? <span className="spinner" /> : <><FiArrowRight /> Sign In</>}
+          <button className="btn-ghost" onClick={handleGoogle} disabled={gLoading}
+            style={{ marginBottom: "1.25rem" }}>
+            {gLoading
+              ? <span className="spinner spinner-dark" />
+              : <><GoogleIcon />&nbsp;Continue with Google</>}
           </button>
-        </form>
 
-        <p className="links-row">
-          No account yet?&nbsp;<Link to="/register">Create one</Link>
-        </p>
+          <div className="auth-divider">
+            <span /><small>or sign in with email</small><span />
+          </div>
+
+          <form onSubmit={handleSubmit} className="auth-form">
+            <div className="input-group">
+              <span className="input-icon"><FiMail /></span>
+              <input type="email" placeholder=" "
+                value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <label>Email address</label>
+            </div>
+
+            <div className="input-group">
+              <span className="input-icon"><FiLock /></span>
+              <input type={showPass ? "text" : "password"} placeholder=" "
+                value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <label>Password</label>
+              <button type="button" className="toggle-password"
+                onClick={() => setShowPass(!showPass)}>
+                {showPass ? <FiEyeOff /> : <FiEye />}
+              </button>
+            </div>
+
+            <div className="form-footer-row">
+              <Link to="/forgot-password" className="forgot-link">Forgot password?</Link>
+            </div>
+
+            <button type="submit" className="submit-btn" disabled={loading}>
+              {loading ? <span className="spinner" /> : <><FiArrowRight />&nbsp;Sign In</>}
+            </button>
+          </form>
+
+          <p className="links-row">
+            No account?&nbsp;<Link to="/register">Create one</Link>
+          </p>
+        </div>
       </div>
     </div>
   );

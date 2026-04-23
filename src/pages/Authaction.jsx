@@ -1,126 +1,39 @@
+/**
+ * AuthAction.jsx
+ * ──────────────────────────────────────────────────────────────────
+ * This page handles ALL Firebase email action links.
+ * Set BOTH Firebase action URLs to: https://yourdomain.com/auth/action
+ *
+ * mode=verifyEmail   → applies code, shows ✅, redirects to /dashboard
+ * mode=resetPassword → shows inline new-password form, then → /login
+ * mode=recoverEmail  → applies code, shows success, redirects to /login
+ * ──────────────────────────────────────────────────────────────────
+ */
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
-import {
-  applyActionCode,
-  verifyPasswordResetCode,
-  confirmPasswordReset,
-} from "firebase/auth";
+import { applyActionCode, verifyPasswordResetCode, confirmPasswordReset } from "firebase/auth";
 import { auth } from "../firebase";
 import { FiLock, FiEye, FiEyeOff, FiCheck, FiArrowLeft } from "react-icons/fi";
 
 function getStrength(p) {
   if (!p) return null;
   let s = 0;
-  if (p.length >= 8)          s++;
-  if (p.length >= 12)         s++;
-  if (/[A-Z]/.test(p))        s++;
-  if (/[0-9]/.test(p))        s++;
+  if (p.length >= 8) s++;
+  if (p.length >= 12) s++;
+  if (/[A-Z]/.test(p)) s++;
+  if (/[0-9]/.test(p)) s++;
   if (/[^A-Za-z0-9]/.test(p)) s++;
   return [
-    { label: "Very Weak",  color: "#ef4444", pct: 10  },
-    { label: "Weak",       color: "#f97316", pct: 25  },
-    { label: "Fair",       color: "#eab308", pct: 50  },
-    { label: "Good",       color: "#84cc16", pct: 70  },
-    { label: "Strong",     color: "#22c55e", pct: 88  },
-    { label: "Very Strong",color: "#10b981", pct: 100 },
+    { label: "Very Weak",   color: "#ef4444", pct: 10  },
+    { label: "Weak",        color: "#f97316", pct: 25  },
+    { label: "Fair",        color: "#eab308", pct: 50  },
+    { label: "Good",        color: "#84cc16", pct: 70  },
+    { label: "Strong",      color: "#22c55e", pct: 88  },
+    { label: "Very Strong", color: "#10b981", pct: 100 },
   ][Math.min(s, 5)];
 }
 
-function Orbs() {
-  return (
-    <div className="bg-orbs">
-      <span className="orb orb-1" />
-      <span className="orb orb-2" />
-      <span className="orb orb-3" />
-    </div>
-  );
-}
-
-// ── Processing screen ─────────────────────────────────────────
-function Processing() {
-  return (
-    <div className="auth-wrapper">
-      <Orbs />
-      <div className="auth-card" style={{ textAlign: "center", padding: "3rem 2rem" }}>
-        <span className="spinner" style={{
-          display: "block", margin: "0 auto 1.25rem",
-          width: 36, height: 36, borderWidth: 3,
-          borderColor: "rgba(245,158,11,0.15)",
-          borderTopColor: "var(--accent)",
-        }} />
-        <p style={{ color: "var(--muted)", fontSize: "0.9rem" }}>Processing your request…</p>
-      </div>
-    </div>
-  );
-}
-
-// ── Email verified success ─────────────────────────────────────
-function EmailVerifiedScreen() {
-  return (
-    <div className="auth-wrapper">
-      <Orbs />
-      <div className="auth-card" style={{ textAlign: "center" }}>
-        <div style={{
-          width: 72, height: 72, borderRadius: "50%",
-          background: "rgba(34,197,94,0.12)",
-          border: "1px solid rgba(34,197,94,0.25)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: "2rem", margin: "0 auto 1.25rem",
-        }}>✅</div>
-        <h1 style={{ fontFamily: "var(--f-head)", fontSize: "1.6rem", fontWeight: 800, marginBottom: "0.5rem" }}>
-          Email verified!
-        </h1>
-        <p style={{ color: "var(--muted)", fontSize: "0.9rem", lineHeight: 1.65 }}>
-          Your account is now active.<br />Redirecting you in a moment…
-        </p>
-        <div style={{
-          width: "100%", height: 3, background: "rgba(255,255,255,0.06)",
-          borderRadius: 2, marginTop: "1.75rem", overflow: "hidden",
-        }}>
-          <div style={{
-            height: "100%", background: "var(--accent)", borderRadius: 2,
-            animation: "progressBar 2.5s linear forwards",
-          }} />
-        </div>
-        <style>{`
-          @keyframes progressBar {
-            from { width: 0%; }
-            to   { width: 100%; }
-          }
-        `}</style>
-      </div>
-    </div>
-  );
-}
-
-// ── Error screen ──────────────────────────────────────────────
-function ErrorScreen({ message }) {
-  return (
-    <div className="auth-wrapper">
-      <Orbs />
-      <div className="auth-card" style={{ textAlign: "center" }}>
-        <div style={{
-          width: 64, height: 64, borderRadius: 20,
-          background: "rgba(239,68,68,0.1)",
-          border: "1px solid rgba(239,68,68,0.2)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: "1.75rem", margin: "0 auto 1.25rem",
-        }}>⚠️</div>
-        <h1 style={{ fontFamily: "var(--f-head)", fontSize: "1.4rem", fontWeight: 700, marginBottom: "0.5rem" }}>
-          Link expired
-        </h1>
-        <p style={{ color: "var(--muted)", fontSize: "0.875rem", lineHeight: 1.65, marginBottom: "1.75rem" }}>
-          {message}
-        </p>
-        <Link to="/login" className="submit-btn" style={{ textDecoration: "none" }}>
-          <FiArrowLeft />&nbsp;Back to Sign In
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-// ── Reset password form ───────────────────────────────────────
+// ── Inline reset-password form ────────────────────────────────────────────────
 function ResetForm({ oobCode, email }) {
   const navigate = useNavigate();
   const [newPass, setNewPass] = useState("");
@@ -156,38 +69,29 @@ function ResetForm({ oobCode, email }) {
   }
 
   if (done) return (
-    <div className="auth-wrapper">
-      <Orbs />
-      <div className="auth-card" style={{ textAlign: "center" }}>
-        <div style={{
-          width: 72, height: 72, borderRadius: "50%",
-          background: "rgba(34,197,94,0.12)",
-          border: "1px solid rgba(34,197,94,0.25)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: "2rem", margin: "0 auto 1.25rem",
-        }}>🎉</div>
-        <h1 style={{ fontFamily: "var(--f-head)", fontSize: "1.6rem", fontWeight: 800, marginBottom: "0.5rem" }}>
+    <div className="centered-wrapper">
+      <div className="centered-card">
+        <div className="status-icon si-ok">🎉</div>
+        <h1 style={{ fontFamily: "var(--f-head)", fontSize: "1.6rem", fontWeight: 700, letterSpacing: "-0.02em", marginBottom: "0.4rem", color: "var(--text)" }}>
           Password updated!
         </h1>
-        <p style={{ color: "var(--muted)", fontSize: "0.9rem" }}>
-          Redirecting you to sign in…
+        <p style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
+          Your password has been set. Redirecting to sign in…
         </p>
+        <div className="progress-wrap"><div className="progress-fill" /></div>
       </div>
     </div>
   );
 
   return (
-    <div className="auth-wrapper">
-      <Orbs />
-      <div className="auth-card">
+    <div className="centered-wrapper">
+      <div className="centered-card" style={{ textAlign: "left" }}>
         <div className="card-header">
           <div className="logo-mark"><span /></div>
           <h1>Create new password</h1>
           <p>For <strong style={{ color: "var(--accent)" }}>{email}</strong></p>
         </div>
-
         {error && <div className="error-banner"><span className="error-dot" />{error}</div>}
-
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="input-group">
             <span className="input-icon"><FiLock /></span>
@@ -198,30 +102,24 @@ function ResetForm({ oobCode, email }) {
               {showNew ? <FiEyeOff /> : <FiEye />}
             </button>
           </div>
-
           {strength && (
             <div className="strength-wrap">
-              <div className="strength-bar">
-                <div className="strength-fill" style={{ width: `${strength.pct}%`, background: strength.color }} />
-              </div>
+              <div className="strength-bar"><div className="strength-fill" style={{ width: `${strength.pct}%`, background: strength.color }} /></div>
               <span className="strength-label" style={{ color: strength.color }}>{strength.label}</span>
             </div>
           )}
-
           <div className="input-group">
             <span className="input-icon"><FiLock /></span>
             <input type={showCon ? "text" : "password"} placeholder=" "
               value={confirm} onChange={(e) => setConfirm(e.target.value)} required
-              style={matchBad ? { borderColor:"var(--error)" } : matchOk ? { borderColor:"var(--success)" } : {}}
-            />
+              style={matchBad ? { borderColor: "var(--error)" } : matchOk ? { borderColor: "var(--success)" } : {}} />
             <label>Confirm password</label>
             <button type="button" className="toggle-password" onClick={() => setShowCon(!showCon)}>
               {showCon ? <FiEyeOff /> : <FiEye />}
             </button>
           </div>
-          {matchBad && <p style={{ color:"var(--error)", fontSize:"0.75rem", marginTop:"-0.5rem" }}>Passwords don't match</p>}
-          {matchOk  && <p style={{ color:"var(--success)", fontSize:"0.75rem", marginTop:"-0.5rem" }}>Passwords match ✓</p>}
-
+          {matchBad && <p style={{ color: "var(--error)", fontSize: "0.75rem", marginTop: "-0.2rem" }}>Passwords don't match</p>}
+          {matchOk  && <p style={{ color: "var(--success)", fontSize: "0.75rem", marginTop: "-0.2rem" }}>Passwords match ✓</p>}
           <button type="submit" className="submit-btn" disabled={loading || !newPass || !confirm}>
             {loading ? <span className="spinner" /> : <><FiCheck />&nbsp;Set New Password</>}
           </button>
@@ -231,7 +129,7 @@ function ResetForm({ oobCode, email }) {
   );
 }
 
-// ── Main ──────────────────────────────────────────────────────
+// ── Main ──────────────────────────────────────────────────────────────────────
 export default function AuthAction() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -244,10 +142,7 @@ export default function AuthAction() {
   const [resetEmail, setResetEmail] = useState("");
 
   useEffect(() => {
-    if (!oobCode || !mode) {
-      navigate("/login", { replace: true });
-      return;
-    }
+    if (!oobCode || !mode) { navigate("/login", { replace: true }); return; }
 
     async function handle() {
       if (mode === "verifyEmail") {
@@ -255,15 +150,14 @@ export default function AuthAction() {
           await applyActionCode(auth, oobCode);
           await auth.currentUser?.reload();
           setPhase("verified");
-          setTimeout(() => {
-            navigate(auth.currentUser ? "/dashboard" : "/login", { replace: true });
-          }, 2500);
+          // After 2.5s go to dashboard (or login if not signed in)
+          setTimeout(() => navigate(auth.currentUser ? "/dashboard" : "/login", { replace: true }), 2500);
         } catch {
           if (auth.currentUser?.emailVerified) {
-            // Already verified — just go to dashboard silently
+            // Already verified — just navigate silently
             navigate("/dashboard", { replace: true });
           } else {
-            setErrorMsg("This verification link has expired or already been used. Please request a new one from the sign-in page.");
+            setErrorMsg("This verification link has expired or already been used. Please request a new one.");
             setPhase("error");
           }
         }
@@ -274,7 +168,7 @@ export default function AuthAction() {
           setResetEmail(email);
           setPhase("resetPassword");
         } catch {
-          setErrorMsg("This reset link has expired or already been used. Please go back and request a new code.");
+          setErrorMsg("This reset link has expired or already been used. Please request a new code.");
           setPhase("error");
         }
 
@@ -292,23 +186,60 @@ export default function AuthAction() {
         navigate("/login", { replace: true });
       }
     }
-
     handle();
   }, []); // eslint-disable-line
 
-  if (phase === "processing")   return <Processing />;
-  if (phase === "error")        return <ErrorScreen message={errorMsg} />;
-  if (phase === "verified")     return <EmailVerifiedScreen />;
-  if (phase === "resetPassword") return <ResetForm oobCode={oobCode} email={resetEmail} />;
-  if (phase === "recovered")    return (
-    <div className="auth-wrapper">
-      <Orbs />
-      <div className="auth-card" style={{ textAlign:"center" }}>
-        <div style={{ fontSize:"2rem", marginBottom:"1rem" }}>📧</div>
-        <h1 style={{ fontFamily:"var(--f-head)", fontSize:"1.5rem", fontWeight:700, marginBottom:"0.5rem" }}>
+  if (phase === "processing") return (
+    <div className="centered-wrapper">
+      <div className="centered-card">
+        <span className="spinner spinner-dark" style={{ width: 28, height: 28, borderWidth: 2.5, display: "block", margin: "0 auto 1rem" }} />
+        <p style={{ color: "var(--muted)", fontSize: "0.9rem" }}>Processing your request…</p>
+      </div>
+    </div>
+  );
+
+  if (phase === "error") return (
+    <div className="centered-wrapper">
+      <div className="centered-card">
+        <div className="status-icon si-err">⚠️</div>
+        <h1 style={{ fontFamily: "var(--f-head)", fontSize: "1.5rem", fontWeight: 700, letterSpacing: "-0.02em", marginBottom: "0.5rem", color: "var(--text)" }}>
+          Link expired
+        </h1>
+        <p style={{ color: "var(--muted)", fontSize: "0.875rem", marginBottom: "1.75rem" }}>{errorMsg}</p>
+        <Link to="/login" className="submit-btn" style={{ textDecoration: "none" }}>
+          <FiArrowLeft />&nbsp;Back to Sign In
+        </Link>
+      </div>
+    </div>
+  );
+
+  if (phase === "verified") return (
+    <div className="centered-wrapper">
+      <div className="centered-card">
+        <div className="status-icon si-ok">✅</div>
+        <h1 style={{ fontFamily: "var(--f-head)", fontSize: "1.65rem", fontWeight: 700, letterSpacing: "-0.02em", marginBottom: "0.4rem", color: "var(--text)" }}>
+          Email verified!
+        </h1>
+        <p style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
+          Your account is now active. Redirecting you in a moment…
+        </p>
+        <div className="progress-wrap"><div className="progress-fill" /></div>
+      </div>
+    </div>
+  );
+
+  if (phase === "resetPassword") return (
+    <ResetForm oobCode={oobCode} email={resetEmail} />
+  );
+
+  if (phase === "recovered") return (
+    <div className="centered-wrapper">
+      <div className="centered-card">
+        <div className="status-icon si-teal">📧</div>
+        <h1 style={{ fontFamily: "var(--f-head)", fontSize: "1.5rem", fontWeight: 700, letterSpacing: "-0.02em", marginBottom: "0.5rem", color: "var(--text)" }}>
           Email recovered!
         </h1>
-        <p style={{ color:"var(--muted)", fontSize:"0.875rem" }}>
+        <p style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
           Your email address has been restored. Redirecting…
         </p>
       </div>

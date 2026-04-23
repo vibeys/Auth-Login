@@ -1,29 +1,21 @@
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { FiLogOut, FiShield, FiUser, FiMail, FiLock, FiArrowRight, FiSettings } from "react-icons/fi";
+import { FiLogOut, FiShield, FiUser, FiMail, FiLock, FiArrowRight } from "react-icons/fi";
 
 export default function Dashboard() {
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
 
-  const name     = currentUser && currentUser.displayName;
-  const initials = name
+  const name      = currentUser?.displayName;
+  const initials  = name
     ? name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
-    : currentUser && currentUser.email
-    ? currentUser.email[0].toUpperCase()
-    : "U";
-  const firstName = name ? name.split(" ")[0] : "User";
+    : currentUser?.email?.[0]?.toUpperCase() || "U";
+  const firstName = name ? name.split(" ")[0] : "there";
 
   async function handleLogout() { await logout(); navigate("/login"); }
 
   return (
     <div className="dashboard-wrapper">
-      <div className="bg-orbs">
-        <span className="orb orb-1" />
-        <span className="orb orb-2" />
-        <span className="orb orb-3" />
-      </div>
-
       <nav className="dash-nav">
         <div className="nav-brand">
           <span className="nav-dot" /> AuthApp
@@ -38,8 +30,8 @@ export default function Dashboard() {
           <div className="user-avatar">{initials}</div>
           <div className="hero-info">
             <h2>Hello, {firstName} 👋</h2>
-            <p>{currentUser && currentUser.email}</p>
-            {currentUser && currentUser.emailVerified && (
+            <p>{currentUser?.email}</p>
+            {currentUser?.emailVerified && (
               <span className="verified-chip">✓ Verified</span>
             )}
           </div>
@@ -49,7 +41,7 @@ export default function Dashboard() {
           <div className="dash-card">
             <div className="card-icon"><FiUser /></div>
             <h3>Your Profile</h3>
-            <p>View and manage your personal account information.</p>
+            <p>View and manage your personal account information and display name.</p>
             <span className="card-action">View profile <FiArrowRight /></span>
           </div>
 
@@ -65,9 +57,9 @@ export default function Dashboard() {
           <div className="dash-card">
             <div className="card-icon"><FiMail /></div>
             <h3>Email Address</h3>
-            <p>{currentUser && currentUser.email}</p>
+            <p>{currentUser?.email}</p>
             <span className="card-action">
-              {currentUser && currentUser.emailVerified ? "Verified ✓" : "Not verified"}
+              {currentUser?.emailVerified ? "Verified ✓" : "Not verified"}
             </span>
           </div>
 

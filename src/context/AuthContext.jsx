@@ -10,7 +10,6 @@ import {
   getRedirectResult,
   sendEmailVerification,
   updatePassword,
-  fetchSignInMethodsForEmail,
   linkWithCredential,
   EmailAuthProvider,
 } from "firebase/auth";
@@ -31,10 +30,7 @@ export function AuthProvider({ children }) {
     return cred;
   };
 
-  /**
-   * Google sign-in — popup first, redirect fallback.
-   * Returns the UserCredential on success, null if redirect was used.
-   */
+  // Popup first, redirect fallback
   const loginWithGoogle = async () => {
     try {
       return await signInWithPopup(auth, googleProvider);
@@ -53,30 +49,37 @@ export function AuthProvider({ children }) {
   };
 
   /**
-   * Check if an email already has an account in Firebase.
-   * Returns true if any sign-in method is registered for that email.
+   * SAFE account-existence check.
+   *
+   * fetchSignInMethodsForEmail is DEPRECATED in Firebase JS SDK v9+ and
+   * returns [] even for real accounts — causing the old code to wrongly
+   * delete users.  We never call it.
+   *
+   * Instead we inspect the providerData that Firebase already gives us on
+   * the signed-in user object after the Google popup/redirect resolves.
+   *
+   * hasPasswordLinked(user)  → true if the user completed Register
+   *                             (email+password provider is linked)
+   * hasGoogleLinked(user)    → true if google.com provider is linked
    */
-  const emailExists = async (email) => {
-    try {
-      const methods = await fetchSignInMethodsForEmail(auth, email);
-      return methods.length > 0;
-    } catch {
-      return false;
-    }
-  };
+  const hasPasswordLinked = (user) =>
+    !!user?.providerData.some((p) => p.providerId === "password");
+
+  const hasGoogleLinked = (user) =>
+    !!user?.providerData.some((p) => p.providerId === "google.com");
 
   /**
-   * After Google sign-in on Register: add email+password to the Google account
-   * so the user has both providers linked.
+   * After Google sign-in on Register:
+   * link an email+password credential to the Google account.
    */
   const linkEmailPassword = async (pass) => {
     const cred = EmailAuthProvider.credential(auth.currentUser.email, pass);
     return linkWithCredential(auth.currentUser, cred);
   };
 
-  const logout         = ()      => signOut(auth);
-  const updateName     = (name)  => updateProfile(auth.currentUser, { displayName: name });
-  const changePassword = (pass)  => updatePassword(auth.currentUser, pass);
+  const logout         = ()     => signOut(auth);
+  const updateName     = (name) => updateProfile(auth.currentUser, { displayName: name });
+  const changePassword = (pass) => updatePassword(auth.currentUser, pass);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -86,7 +89,6 @@ export function AuthProvider({ children }) {
     return unsub;
   }, []);
 
-  // Catch Google redirect result after page reload
   useEffect(() => {
     getRedirectResult(auth).catch(() => {});
   }, []);
@@ -94,9 +96,15 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{
       currentUser,
-      login, register, loginWithGoogle,
-      logout, updateName, changePassword,
-      emailExists, linkEmailPassword,
+      login,
+      register,
+      loginWithGoogle,
+      logout,
+      updateName,
+      changePassword,
+      hasPasswordLinked,
+      hasGoogleLinked,
+      linkEmailPassword,
     }}>
       {!loading && children}
     </AuthContext.Provider>
